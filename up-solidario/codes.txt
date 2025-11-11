@@ -1,0 +1,6 @@
+python -m http.server 8001 (Abrir servidor python)
+
+docker-compose up (Abrir servidor docker)
+
+stripe listen --forward-to localhost:8000/api/stripe-webhook/ (Abrir servidor stripe)
+

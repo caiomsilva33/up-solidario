@@ -1,0 +1,84 @@
+# docker-compose.yml
+
+services:
+  api:
+    build: .
+    container_name: up_solidario_api
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file: ./.env
+    volumes:
+      # Mapeia a nova pasta 'backend' para dentro do contentor
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - up_solidario_network
+
+  # 2. Serviço da Base de Dados (PostgreSQL + PostGIS)
+  db:
+    image: postgis/postgis:15-3.4-alpine
+    container_name: up_solidario_db
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    # Volume para garantir que os dados da base de dados não se percam
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - up_solidario_network
+    restart: unless-stopped
+
+  # 3. Serviço de Cache e Mensageria (Redis)
+  cache:
+    image: redis:7.2-alpine
+    container_name: up_solidario_cache
+    networks:
+      - up_solidario_network
+    restart: unless-stopped
+
+  # 4. Serviço de Busca (Meilisearch)
+  search:
+    image: getmeili/meilisearch:v1.3
+    container_name: up_solidario_search
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    volumes:
+      - meili_data:/meili_data
+    ports:
+      - "7700:7700"
+    networks:
+      - up_solidario_network
+    restart: unless-stopped
+
+  # 5. Serviço de Armazenamento (MinIO S3)
+  storage:
+    image: minio/minio:latest
+    container_name: up_solidario_storage
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - up_solidario_network
+    restart: unless-stopped
+
+# Rede virtual partilhada por todos os serviços
+networks:
+  up_solidario_network:
+    driver: bridge
+
+# Volumes nomeados para persistência de dados
+volumes:
+  postgres_data:
+  meili_data:
+  minio_data:

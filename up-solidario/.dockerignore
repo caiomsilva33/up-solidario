@@ -1,0 +1,20 @@
+# Ficheiros e pastas do Git
+.git/
+.github/
+.gitignore
+
+# Ficheiro de segredos local
+.env
+
+# Ambiente virtual local do Python (se existir na raiz)
+venv/
+# E o que temos dentro da nossa pasta api
+api/venv/
+
+# Caches do Python
+**/__pycache__/
+**/*.pyc
+
+# Pastas de frontend que não fazem parte do build do backend
+web/
+mobile/
