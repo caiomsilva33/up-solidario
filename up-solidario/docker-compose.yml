@@ -1,39 +1,58 @@
 # docker-compose.yml
+#
+# Define o ambiente de desenvolvimento local para o projeto Up Solidário.
+# Todos os serviços, redes e volumes são orquestrados por este ficheiro.
 
 services:
+  # 1. Serviço da API (Django)
   api:
     build: .
     container_name: up_solidario_api
     command: python manage.py runserver 0.0.0.0:8000
     env_file: ./.env
     volumes:
-      # Mapeia a nova pasta 'backend' para dentro do contentor
+      # Volume para hot-reloading do código-fonte do backend
       - ./backend:/app
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        # Espera que o 'healthcheck' do 'db' passe antes de iniciar a API
+        condition: service_healthy
+      cache:
+        condition: service_started
+      search:
+        condition: service_started
+      storage:
+        condition: service_started
     networks:
       - up_solidario_network
 
-  # 2. Serviço da Base de Dados (PostgreSQL + PostGIS)
+  # 2. Serviço da Base de Dados (Postgis)
   db:
     image: postgis/postgis:15-3.4-alpine
     container_name: up_solidario_db
     environment:
+      # Carrega variáveis do .env
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    # Volume para garantir que os dados da base de dados não se percam
     volumes:
+      # Volume nomeado para persistência dos dados
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
       - up_solidario_network
     restart: unless-stopped
+    # Healthcheck: Garante que o Postgres está pronto para aceitar ligações
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 3. Serviço de Cache e Mensageria (Redis)
+  # 3. Serviço de Cache (Redis)
   cache:
     image: redis:7.2-alpine
     container_name: up_solidario_cache
@@ -62,11 +81,14 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    # Comando para iniciar o MinIO com a consola na porta 9001
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     ports:
+      # 9000: Porta da API S3
       - "9000:9000"
+      # 9001: Porta da WebUI (Consola)
       - "9001:9001"
     networks:
       - up_solidario_network
