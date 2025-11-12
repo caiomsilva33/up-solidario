@@ -13,22 +13,23 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # 4. Instalação de Dependências (Otimizado para Cache)
-# Copia apenas o ficheiro de requisitos primeiro
 COPY backend/requirements.txt .
-# Instala as dependências. Esta camada fica em cache.
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 5. Copiar o Código-fonte
-# Copia o resto do código da aplicação
 COPY backend/ .
 
 # 6. Coletar Ficheiros Estáticos
-# CORREÇÃO: Define as settings 'dev' para o build
-# Isto corrige o 'ModuleNotFoundError' durante o 'collectstatic'
+# Define as settings 'dev' APENAS para este passo de build
 ENV DJANGO_SETTINGS_MODULE=core.settings.dev
 RUN python manage.py collectstatic --noinput
 
 # 7. Comando de Execução (Produção)
-# O Gunicorn será usado para servir a aplicação em produção.
-# O Render/Fly irá substituir o DJANGO_SETTINGS_MODULE para 'core.settings.prod'.
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "core.wsgi:application"]
+#
+# --- A "ARRUMAÇÃO" ESTÁ AQUI ---
+#
+# Limpa a variável de ambiente do build
+ENV DJANGO_SETTINGS_MODULE=""
+#
+# Executa o Gunicorn e define explicitamente as settings de 'prod'
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--env", "DJANGO_SETTINGS_MODULE=core.settings.prod", "core.wsgi:application"]
