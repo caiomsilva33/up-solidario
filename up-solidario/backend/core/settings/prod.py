@@ -12,7 +12,10 @@ DEBUG = False
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # Os hosts permitidos são lidos das variáveis de ambiente
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(' ')
+ALLOWED_HOSTS = [
+    'up-solidario-api.onrender.com',
+    'www.upsolidario.com.br',
+]
 
 # --- Configurações de CORS e CSRF ---
 
